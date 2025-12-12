@@ -1,223 +1,75 @@
-const User = require("../models/userModel");
-const cloudinary = require("../service/cloudinaryConfig"); 
-const multer = require('multer');
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+import mongoose from "mongoose";
+import userModel from "../models/userModel.js";
+import jwt from "jsonwebtoken"
+import bcrypt from "bcrypt"
+import validator from "validator"
 
+// login user 
 
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "uploads/"); // Folder for temporary uploads
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + path.extname(file.originalname)); // Preserve the file extension
-    },
-});
-
-const upload = multer({ storage });
-
-exports.createPortfolio = async (req, res) => {
+const loginUser = async(req,res)=>{
+    const {email,password} = req.body;
     try {
-        const { name, email, graduationYear, portfoliolink, linkedIn, description, experienceCategory, password } = req.body;
+        const user = await userModel.findOne({email})
 
-        // Files will now be in req.files, not req.body
-        let portfolioHeroUrl = '';
-        let profilePhotoUrl = '';
+        if(!user){
+            return res.json({success:false,message:"User does not exist : ("})
+        }
+        const isMatch = await bcrypt.compare(password,user.password)
 
-        // Check if portfolioHero file is present and upload to Cloudinary
-        if (req.files && req.files.portfolioHero && req.files.portfolioHero[0]) {
-            const resultHero = await cloudinary.uploader.upload(req.files.portfolioHero[0].path, { folder: 'portfolios' });
-            portfolioHeroUrl = resultHero.secure_url;
+        if (!isMatch) {
+            return res.json({success:false,message:"Invalid Credentials"})
         }
 
-        // Check if profilePhoto file is present and upload to Cloudinary
-        if (req.files && req.files.profilePhoto && req.files.profilePhoto[0]) {
-            const resultProfile = await cloudinary.uploader.upload(req.files.profilePhoto[0].path, { folder: 'portfolios' });
-            profilePhotoUrl = resultProfile.secure_url;
-        }
+        const token = createToken(user._id);
+        res.json({success:true,token}
 
-        // Check if the user already exists by email
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "Email already exists" });
-        }
-
-        // Create a new user with the provided data
-        const newUser = new User({
-            portfolioHero: portfolioHeroUrl,
-            profilePhoto: profilePhotoUrl,
-            name,
-            email,
-            password,
-            graduationYear,
-            portfoliolink,
-            linkedIn,
-            description,
-            experienceCategory,
-            role: "user", // Default role can be 'user'
-        });
-
-        // Save the new user
-        const savedUser = await newUser.save();
-
-        // Generate JWT token
-        const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-
-        // Return the response with the user and token
-        res.status(201).json({
-            message: "User created successfully",
-            user: savedUser,
-            token: token,
-        });
+        )
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error creating portfolio", error });
+        res.json({success:false,message:"Error"})
     }
-};
+}
 
+const createToken = (id) =>{
+    return jwt.sign({id},process.env.JWT_SECRET)
+}
+// regsiter 
 
-// exports.createPortfolio = async (req, res) => {
-//     try {
-//         const {portfolioHero, profilePhoto, name, email, graduationYear, portfoliolink, linkedIn, description, experienceCategory, password } = req.body;
-
-        
-
-//         // Handle image uploads to Cloudinary
-//         let portfolioHeroUrl = '';
-//         let profilePhotoUrl = '';
-
-//         if (portfolioHero) {
-//             const resultHero = await cloudinary.uploader.upload(portfolioHero, { folder: 'portfolios' });
-//             portfolioHeroUrl = resultHero.secure_url;
-//         }
-
-//         if (profilePhoto) {
-//             const resultProfile = await cloudinary.uploader.upload(profilePhoto, { folder: 'portfolios' });
-//             profilePhotoUrl = resultProfile.secure_url;
-//         }
-
-//         // Check if the user already exists by email
-//         const existingUser = await User.findOne({ email });
-//         if (existingUser) {
-//             return res.status(400).json({ message: "Email already exists" });
-//         }
-
-//         // Create new user with hashed password
-//         const newUser = new User({
-//             portfolioHero: portfolioHeroUrl,
-//             profilePhoto: profilePhotoUrl,
-//             name,
-//             email,
-//             password,
-//             graduationYear,
-//             portfoliolink,
-//             linkedIn,
-//             description,
-//             experienceCategory,
-//             role: "user", // Default role can be 'user'
-//         });
-
-//         // Save the new user
-//         const savedUser = await newUser.save();
-
-//         // Generate JWT token
-//         const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, {
-//             expiresIn: '1d', // Adjust the token expiration as needed
-//         });
-
-//         // Return the JWT along with user details
-//         res.status(201).json({
-//             message: "User created successfully",
-//             user: savedUser,
-//             token: token,
-//         });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Error creating portfolio", error });
-//     }
-// };
-
-
-
-exports.uploadImage = async (req, res) => {
+const registerUser = async(req,res)=>{
+    const {name,password,email} = req.body;
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: "No file uploaded" });
+        // check if user already exists 
+        const exists = await userModel.findOne({email})
+        if(exists){
+            return res.json({success:false,message:"User Already Exists !"})
         }
+                // email validation
 
-        const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-            public_id: `uploads/${req.file.filename}`,
-        });
-
-        res.status(200).json({
-            message: "Image uploaded successfully",
-            url: uploadResult.secure_url,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error uploading image", error });
-    }
-};
-
-
-
-// Get all users
-exports.getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find();
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// Get user by ID
-exports.getUserById = async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
+         if(!validator.isEmail(email)){
+            return res.json({success:false,message:"Please enter a valid email"})
         }
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// Update user by ID
-exports.updateUserById = async (req, res) => {
-    try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
+        // strong pass check
+        if(password.length<8){
+            return res.json({success:false,message:"Please Enter a strong Password"})
         }
-        res.json(user);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-};
+        // passsword hash
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(password,salt)
 
-// Delete user by ID
-exports.deleteUserById = async (req, res) => {
-    try {
-        const user = await User.findByIdAndDelete(req.params.id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        res.json({ message: "User deleted" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+        const newUser = new userModel({
+            name:name,
+            email:email,
+            password:hashedPassword
+     } )
 
-// Get users by experience category
-exports.getUsersByCategory = async (req, res) => {
-    try {
-        const users = await User.find({ experienceCategory: req.params.experience });
-        res.json(users);
+     // save user in db 
+     const user = await newUser.save()
+     const token = createToken(user._id)
+     res.json({success:true,token})
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.log(error);
+        res.json({success:false,message:"Error"})
     }
-};
+}
+
+export {loginUser,registerUser}
