@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+import mongoose from "mongoose";
+
+export const connectDB = async () => {
+    await mongoose
+        .connect(process.env.MONGO_URI)
+        .then(() => console.log("DB connected"))
+        .catch((err) => console.log(err));
+};
+=======
 const mongoose = require("mongoose");
 
 const connectDB = async()=>{
@@ -11,3 +21,4 @@ const connectDB = async()=>{
 }
 
 module.exports = connectDB;
+>>>>>>> 668573a5f1ee6796e5eaec3d81b0b10d0d6df14f

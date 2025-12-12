@@ -1,3 +1,23 @@
+<<<<<<< HEAD
+# Ignore environment file
+.env
+
+# Ignore node modules
+node_modules/
+
+# Ignore uploads folder
+
+# Ignore logs
+logs/
+*.log
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
+=======
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -21,3 +41,4 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+>>>>>>> 668573a5f1ee6796e5eaec3d81b0b10d0d6df14f

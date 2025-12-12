@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    cartData: { type: Array, default: [] } // stores all orders placed by user
+}, { minimize: false });
+
+const userModel = mongoose.models.user || mongoose.model("user", userSchema);
+export default userModel;
+=======
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -81,3 +94,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
+>>>>>>> 668573a5f1ee6796e5eaec3d81b0b10d0d6df14f
